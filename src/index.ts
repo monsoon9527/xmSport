@@ -81,7 +81,7 @@ import { sendNotification, getNotifyTitle } from './notify';
     
     // 2. 获取loginToken和userId
     console.log('🔄 第2步: 获取LoginToken和UserId...');
-    const { loginToken, userId } = await getLoginTokenAndUserId(code);
+    const { loginToken, userId } = await getLoginTokenAndUserId(code, phoneNumber);
     
     // 3. 获取appToken
     console.log('🔄 第3步: 获取AppToken...');

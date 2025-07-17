@@ -89,12 +89,13 @@ function getCode(phoneNumber, password) {
         try {
             const getLoginCode = () => __awaiter(this, void 0, void 0, function* () {
                 // 构造请求配置
-                const url = `https://api-user.huami.com/registrations/+86${phoneNumber}/tokens`;
+                const url = `https://api-user.huami.com/registrations/${phoneNumber}/tokens`;
                 const headers = {
                     'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-                    'User-Agent': 'MiFit/4.6.0 (iPhone; iOS 14.0.1; Scale/2.00)'
+                    'User-Agent': 'Dalvik/2.1.0 (Linux; U; Android 5.1.1; SM-G9750 Build/LMY48Z)'
                 };
                 const data = {
+                    phone_number: phoneNumber,
                     client_id: 'HuaMi',
                     password: password,
                     redirect_uri: 'https://s3-us-west-2.amazonaws.com/hm-registration/successsignin.html',
@@ -135,7 +136,7 @@ function getCode(phoneNumber, password) {
  * @param {string} code - 登录Code
  * @returns {Promise<LoginTokenAndUserIdResult>} 登录Token和用户ID
  */
-function getLoginTokenAndUserId(code) {
+function getLoginTokenAndUserId(code, phoneNumber) {
     return __awaiter(this, void 0, void 0, function* () {
         const getTokenAndUserId = () => __awaiter(this, void 0, void 0, function* () {
             const url = 'https://account.huami.com/v2/client/login';
@@ -143,16 +144,28 @@ function getLoginTokenAndUserId(code) {
                 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
                 'User-Agent': 'MiFit/4.6.0 (iPhone; iOS 14.0.1; Scale/2.00)'
             };
+            // 1) 判断登录类型
+            const third_name = phoneNumber.startsWith('+86') ? 'huami_phone' : 'email';
+            // 2) 原有 data 对象里加入所有 Python 版也有的字段：
             const data = {
+                allow_registration: 'false',
                 app_name: 'com.xiaomi.hm.health',
-                app_version: '4.6.0',
+                app_version: '6.3.5',
                 code: code,
                 country_code: 'CN',
                 device_id: '2C8B4939-0CCD-4E94-8CBA-CB8EA6E613A1',
                 device_model: 'phone',
+                dn: 'api-user.huami.com%2Capi-mifit.huami.com%2Capp-analytics.huami.com',
                 grant_type: 'access_token',
-                third_name: 'huami_phone'
+                lang: 'zh_CN',
+                os_version: '1.5.0',
+                source: 'com.xiaomi.hm.health',
+                third_name
             };
+            // 3) 如果是邮箱登录（third_name === 'email'），再加上 passport：
+            if (third_name === 'email') {
+                data.passport = phoneNumber;
+            }
             const response = yield axios_1.default.post(url, (0, utils_1.toQueryString)(data), {
                 headers: headers
             });
