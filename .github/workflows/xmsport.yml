@@ -33,8 +33,52 @@ jobs:
           
       - name: 安装依赖
         run: npm ci       # 使用ci而不是install，更快更可靠
-      
+      # ====== 随机 8 天跳过（当月固定）开始 ======
+      - name: 准备日期参数
+        id: dt
+        run: |
+          echo "year=$(date +'%Y')" >> "$GITHUB_OUTPUT"
+          echo "month=$(date +'%m')" >> "$GITHUB_OUTPUT"
+          echo "ym=$(date +'%Y-%m')" >> "$GITHUB_OUTPUT"
+
+      - name: 恢复当月跳过日期缓存
+        id: cache-skip
+        uses: actions/cache@v3
+        with:
+          path: .github/_skip_days
+          key: skip-days-${{ steps.dt.outputs.ym }}
+
+      - name: 生成/读取当月随机 8 天
+        id: prepare-skip-days
+        run: |
+          YEAR=${{ steps.dt.outputs.year }}
+          MONTH=${{ steps.dt.outputs.month }}
+          FILE=".github/_skip_days/${YEAR}-${MONTH}.txt"
+
+          mkdir -p .github/_skip_days
+
+          if [ -f "$FILE" ]; then
+            echo "已存在随机跳过日文件：$FILE"
+          else
+            DAYS_IN_MONTH=$(cal "$MONTH" "$YEAR" | awk 'NF {DAYS=$NF} END {print DAYS}')
+            shuf -i 1-$DAYS_IN_MONTH -n 8 | sort -n | xargs -I{} printf "%02d\n" {} > "$FILE"
+            echo "已生成随机跳过日文件：$FILE"
+          fi
+
+          echo "本月随机跳过日期："
+          cat "$FILE"
+
+          TODAY=$(date +'%d')
+          if grep -qw "$TODAY" "$FILE"; then
+            echo "should_skip=true" >> "$GITHUB_OUTPUT"
+            echo "今天($TODAY) 为跳过日，将跳过后续执行。"
+          else
+            echo "should_skip=false" >> "$GITHUB_OUTPUT"
+            echo "今天($TODAY) 不是跳过日，继续执行。"
+          fi
+      # ====== 随机 8 天跳过（当月固定）结束 ======
       - name: 读取数据模板文件
+        if: steps.prepare-skip-days.outputs.should_skip != 'true'
         id: data-json
         run: |
           DATA_CONTENT=$(cat dist/data.txt)
@@ -44,6 +88,7 @@ jobs:
           echo "✅ 已读取数据模板文件"
         
       - name: 运行脚本
+        if: steps.prepare-skip-days.outputs.should_skip != 'true'
         env:
           PHONE_NUMBER: ${{ secrets.PHONE_NUMBER }}
           PASSWORD: ${{ secrets.PASSWORD }}
@@ -63,7 +108,7 @@ jobs:
         run: node dist/index.js
       
       - name: 处理结果
-        if: always()
+        if: steps.prepare-skip-days.outputs.should_skip != 'true'
         run: |
           echo "当前时间: $(date "+%Y/%m/%d %H:%M:%S")"
           echo "工作流执行状态: ${{ job.status }}" 
