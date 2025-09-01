@@ -138,7 +138,8 @@ function processExistingTemplate(step: number, jsonTemplate: string): string {
     }
     
     return processedData;
-  } catch (error) {
-    throw new Error(`❌ 处理模板时出错: ${error instanceof Error ? error.message : String(error)}`);
-  }
+    } catch (error) {
+      throw new Error(`❌ 处理模板时出错: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  } 
 } 
