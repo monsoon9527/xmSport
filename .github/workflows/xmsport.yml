@@ -37,9 +37,9 @@ jobs:
       - name: 准备日期参数
         id: dt
         run: |
-          echo "year=$(date +'%Y')" >> "$GITHUB_OUTPUT"
-          echo "month=$(date +'%m')" >> "$GITHUB_OUTPUT"
-          echo "ym=$(date +'%Y-%m')" >> "$GITHUB_OUTPUT"
+          echo "year=$(TZ=Asia/Shanghai date +'%Y')" >> "$GITHUB_OUTPUT"
+          echo "month=$(TZ=Asia/Shanghai date +'%m')" >> "$GITHUB_OUTPUT"
+          echo "ym=$(TZ=Asia/Shanghai date +'%Y-%m')" >> "$GITHUB_OUTPUT"
 
       - name: 恢复当月跳过日期缓存
         id: cache-skip
@@ -52,21 +52,22 @@ jobs:
         id: prepare-skip-days
         run: |
           # 统一用北京时间计算
-          YEAR=$(TZ=Asia/Shanghai date +%Y)
-          MONTH=$(TZ=Asia/Shanghai date +%m)
+          YEAR='${{ steps.dt.outputs.year }}'
+          MONTH='${{ steps.dt.outputs.month }}'
           FILE=".github/_skip_days/${YEAR}-${MONTH}.txt"
           mkdir -p .github/_skip_days
-          # 计算当月天数（GNU date）
-          DAYS_IN_MONTH=$(date -d "${YEAR}-${MONTH}-01 +1 month -1 day" +%d)
+          # 若本次已命中缓存，通常文件已存在；若首次运行或缓存空，才生成
           if [ -f "$FILE" ] && [ "$(wc -l < "$FILE")" -eq 7 ]; then
             echo "已存在随机跳过日文件：$FILE"
           else
-            # 生成 7 天，格式 01..31，升序
+            DAYS_IN_MONTH=$(date -d "${YEAR}-${MONTH}-01 +1 month -1 day" +%d)
             seq -w 1 "$DAYS_IN_MONTH" | shuf | head -n 7 | sort -n > "$FILE"
             echo "已生成随机跳过日文件：$FILE"
           fi
+      
           echo "本月随机跳过日期："
           cat "$FILE"
+      
           TODAY=$(TZ=Asia/Shanghai date +%d)
           if grep -qw "$TODAY" "$FILE"; then
             echo "should_skip=true" >> "$GITHUB_OUTPUT"
