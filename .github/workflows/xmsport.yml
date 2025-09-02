@@ -28,7 +28,7 @@ jobs:
       - name: 设置Node.js环境
         uses: actions/setup-node@v3
         with:
-          node-version: '16'
+          node-version: '20'
           cache: 'npm'   # 启用npm缓存
           
       - name: 安装依赖
@@ -47,11 +47,13 @@ jobs:
         with:
           path: .github/_skip_days
           key: skip-days-${{ steps.dt.outputs.ym }}
-
+          
+      - name: 缓存命中情况
+        run: echo "cache-hit=${{ steps.cache-skip.outputs.cache-hit }}"
+        
       - name: 生成/读取当月随机 7 天
         id: prepare-skip-days
         run: |
-          # 统一用北京时间计算
           YEAR='${{ steps.dt.outputs.year }}'
           MONTH='${{ steps.dt.outputs.month }}'
           FILE=".github/_skip_days/${YEAR}-${MONTH}.txt"
