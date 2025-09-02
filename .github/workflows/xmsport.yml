@@ -43,7 +43,7 @@ jobs:
 
       - name: 恢复当月跳过日期缓存
         id: cache-skip
-        uses: actions/cache@v3
+        uses: actions/cache/restore@v3
         with:
           path: .github/_skip_days
           key: skip-days-${{ steps.dt.outputs.ym }}
@@ -78,6 +78,12 @@ jobs:
             echo "should_skip=false" >> "$GITHUB_OUTPUT"
             echo "今天($TODAY) 不是跳过日，继续执行。"
           fi
+      - name: 保存当月跳过日期缓存（仅在未命中时）
+        if: steps.cache-skip.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v3
+        with:
+          path: .github/_skip_days
+          key: skip-days-${{ steps.dt.outputs.ym }}
       # ====== 随机 7 天跳过（当月固定）结束 ======
       - name: 读取数据模板文件
         if: steps.prepare-skip-days.outputs.should_skip != 'true'
